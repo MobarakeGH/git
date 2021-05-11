@@ -26,4 +26,9 @@ test_expect_success '-S --pickaxe-regex' '
 	verbose test 4096-zeroes.txt = "$(cat out)"
 '
 
+test_expect_failure '-S with separate option should not error out' '
+	# "--cached" here is not an option---it is an arg to "-S"
+	git diff-index -S --cached HEAD^
+'
+
 test_done
