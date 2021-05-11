@@ -52,7 +52,8 @@ static struct reftable_stack *stack_for(struct git_reftable_ref_store *store,
 static int git_reftable_read_raw_ref(struct ref_store *ref_store,
 				     const char *refname, struct object_id *oid,
 				     struct strbuf *referent,
-				     unsigned int *type);
+				     unsigned int *type,
+				     int *failure_errno);
 
 static void clear_reftable_log_record(struct reftable_log_record *log)
 {
@@ -376,7 +377,8 @@ static int fixup_symrefs(struct ref_store *ref_store,
 						&old_oid, &referent,
 						/* mutate input, like
 						   files-backend.c */
-						&update->type);
+						&update->type,
+						&errno);
 		if (err < 0 && errno == ENOENT &&
 		    is_null_oid(&update->old_oid)) {
 			err = 0;
@@ -1538,7 +1540,7 @@ static int reftable_error_to_errno(int err)
 static int git_reftable_read_raw_ref(struct ref_store *ref_store,
 				     const char *refname, struct object_id *oid,
 				     struct strbuf *referent,
-				     unsigned int *type)
+				     unsigned int *type, int *failure_errno)
 {
 	struct git_reftable_ref_store *refs =
 		(struct git_reftable_ref_store *)ref_store;
@@ -1560,12 +1562,12 @@ static int git_reftable_read_raw_ref(struct ref_store *ref_store,
 
 	err = reftable_stack_read_ref(stack, refname, &ref);
 	if (err > 0) {
-		errno = ENOENT;
+		*failure_errno = ENOENT;
 		err = -1;
 		goto done;
 	}
 	if (err < 0) {
-		errno = reftable_error_to_errno(err);
+		*failure_errno = reftable_error_to_errno(err);
 		err = -1;
 		goto done;
 	}
@@ -1578,7 +1580,7 @@ static int git_reftable_read_raw_ref(struct ref_store *ref_store,
 		oidread(oid, reftable_ref_record_val1(&ref));
 	} else {
 		*type |= REF_ISBROKEN;
-		errno = EINVAL;
+		*failure_errno = EINVAL;
 		err = -1;
 	}
 done:
