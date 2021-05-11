@@ -44,6 +44,8 @@ struct repo_settings {
 
 	unsigned command_requires_full_index:1,
 		 sparse_index:1;
+
+	int use_builtin_fsmonitor;
 };
 
 struct repository {
