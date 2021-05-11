@@ -1382,4 +1382,8 @@ static inline void *container_of_or_null_offset(void *ptr, size_t offset)
 
 void sleep_millisec(int millisec);
 
+#ifdef NO_UNCOMPRESS2
+
+#endif
+
 #endif
