@@ -349,7 +349,7 @@ test_expect_success 'maintenance.incremental-repack.auto' '
 	test_subcommand git multi-pack-index write --no-progress <trace-B
 '
 
-test_expect_success 'pack-refs task' '
+test_expect_success REFFILES 'pack-refs task' '
 	for n in $(test_seq 1 5)
 	do
 		git branch -f to-pack/$n HEAD || return 1

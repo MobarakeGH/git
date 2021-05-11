@@ -119,7 +119,7 @@ test_expect_success 'min/max age uses entry date to limit' '
 	test_cmp expect actual
 '
 
-test_expect_success 'walk prefers reflog to ref tip' '
+test_expect_success REFFILES 'walk prefers reflog to ref tip' '
 	head=$(git rev-parse HEAD) &&
 	one=$(git rev-parse one) &&
 	ident="$GIT_COMMITTER_NAME <$GIT_COMMITTER_EMAIL> $GIT_COMMITTER_DATE" &&
