@@ -2754,15 +2754,34 @@ static struct untracked_cache_dir *validate_untracked_cache(struct dir_struct *d
 	return root;
 }
 
+static void trace2_read_directory_statistics(struct dir_struct *dir,
+					     struct repository *repo,
+					     const char *path)
+{
+	if (!dir->untracked)
+		return;
+	trace2_data_string("read_directory", repo, "path", path);
+	trace2_data_intmax("read_directory", repo,
+			   "node-creation", dir->untracked->dir_created);
+	trace2_data_intmax("read_directory", repo,
+			   "gitignore-invalidation",
+			   dir->untracked->gitignore_invalidated);
+	trace2_data_intmax("read_directory", repo,
+			   "directory-invalidation",
+			   dir->untracked->dir_invalidated);
+	trace2_data_intmax("read_directory", repo,
+			   "opendir", dir->untracked->dir_opened);
+}
+
 int read_directory(struct dir_struct *dir, struct index_state *istate,
 		   const char *path, int len, const struct pathspec *pathspec)
 {
 	struct untracked_cache_dir *untracked;
 
-	trace_performance_enter();
+	trace2_region_enter("dir", "read_directory", istate->repo);
 
 	if (has_symlink_leading_path(path, len)) {
-		trace_performance_leave("read directory %.*s", len, path);
+		trace2_region_leave("dir", "read_directory", istate->repo);
 		return dir->nr;
 	}
 
@@ -2778,23 +2797,20 @@ int read_directory(struct dir_struct *dir, struct index_state *istate,
 	QSORT(dir->entries, dir->nr, cmp_dir_entry);
 	QSORT(dir->ignored, dir->ignored_nr, cmp_dir_entry);
 
-	trace_performance_leave("read directory %.*s", len, path);
+	if (trace2_is_enabled()) {
+		struct strbuf tmp = STRBUF_INIT;
+		strbuf_add(&tmp, path, len);
+		trace2_read_directory_statistics(dir, istate->repo, tmp.buf);
+		strbuf_release(&tmp);
+	}
+
+	trace2_region_leave("dir", "read_directory", istate->repo);
 	if (dir->untracked) {
 		static int force_untracked_cache = -1;
-		static struct trace_key trace_untracked_stats = TRACE_KEY_INIT(UNTRACKED_STATS);
 
 		if (force_untracked_cache < 0)
 			force_untracked_cache =
 				git_env_bool("GIT_FORCE_UNTRACKED_CACHE", 0);
-		trace_printf_key(&trace_untracked_stats,
-				 "node creation: %u\n"
-				 "gitignore invalidation: %u\n"
-				 "directory invalidation: %u\n"
-				 "opendir: %u\n",
-				 dir->untracked->dir_created,
-				 dir->untracked->gitignore_invalidated,
-				 dir->untracked->dir_invalidated,
-				 dir->untracked->dir_opened);
 		if (force_untracked_cache &&
 			dir->untracked == istate->untracked &&
 		    (dir->untracked->dir_opened ||
@@ -2805,6 +2821,7 @@ int read_directory(struct dir_struct *dir, struct index_state *istate,
 			FREE_AND_NULL(dir->untracked);
 		}
 	}
+
 	return dir->nr;
 }
 
