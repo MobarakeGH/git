@@ -984,7 +984,17 @@ static void write_reused_pack(struct hashfile *f)
 				break;
 
 			offset += ewah_bit_ctz64(word >> offset);
-			write_reused_pack_one(pos + offset, f, &w_curs);
+			if (bitmap_is_midx(bitmap_git)) {
+				off_t pack_offs = bitmap_pack_offset(bitmap_git,
+								     pos + offset);
+				uint32_t pos;
+
+				if (offset_to_pack_pos(reuse_packfile, pack_offs, &pos) < 0)
+					die(_("write_reused_pack: could not locate %"PRIdMAX),
+					    (intmax_t)pack_offs);
+				write_reused_pack_one(pos, f, &w_curs);
+			} else
+				write_reused_pack_one(pos + offset, f, &w_curs);
 			display_progress(progress_state, ++written);
 		}
 	}
@@ -1116,7 +1126,8 @@ static void write_pack_file(void)
 
 				bitmap_writer_show_progress(progress);
 				bitmap_writer_select_commits(indexed_commits, indexed_commits_nr, -1);
-				bitmap_writer_build(&to_pack);
+				if (bitmap_writer_build(&to_pack) < 0)
+					die(_("failed to write bitmap index"));
 				bitmap_writer_finish(written_list, nr_written,
 						     tmpname.buf, write_bitmap_options);
 				write_bitmap_index = 0;
