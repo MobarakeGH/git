@@ -4,29 +4,13 @@ test_description='git bugreport'
 
 . ./test-lib.sh
 
-# Headers "[System Info]" will be followed by a non-empty line if we put some
-# information there; we can make sure all our headers were followed by some
-# information to check if the command was successful.
-HEADER_PATTERN="^\[.*\]$"
-
-check_all_headers_populated () {
-	while read -r line
-	do
-		if test "$(grep "$HEADER_PATTERN" "$line")"
-		then
-			echo "$line"
-			read -r nextline
-			if test -z "$nextline"; then
-				return 1;
-			fi
-		fi
-	done
-}
-
-test_expect_success 'creates a report with content in the right places' '
+test_expect_success 'creates a report with content' '
 	test_when_finished rm git-bugreport-check-headers.txt &&
 	git bugreport -s check-headers &&
-	check_all_headers_populated <git-bugreport-check-headers.txt
+	grep "^Please answer " git-bugreport-check-headers.txt &&
+	grep "^\[System Info\]$" git-bugreport-check-headers.txt &&
+	grep "^git version:$" git-bugreport-check-headers.txt &&
+	grep "^\[Enabled Hooks\]$" git-bugreport-check-headers.txt
 '
 
 test_expect_success 'dies if file with same name as report already exists' '
